@@ -1,0 +1,326 @@
+import React, { useState, useEffect, useRef } from 'react';
+import {
+    MagnifyingGlassIcon,
+    ChatBubbleLeftIcon,
+    ArrowDownIcon,
+    ClockIcon
+} from '@heroicons/react/24/outline';
+import { messageService } from '../../services/whatsapp';
+import { format } from 'date-fns';
+import toast from 'react-hot-toast';
+
+const MessageView = ({ chat, messages, setMessages }) => {
+    const [loading, setLoading] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [searchResults, setSearchResults] = useState([]);
+    const [showSearch, setShowSearch] = useState(false);
+    const [hasMore, setHasMore] = useState(true);
+    const [offset, setOffset] = useState(0);
+    const messagesEndRef = useRef(null);
+    const messagesContainerRef = useRef(null);
+
+    useEffect(() => {
+        if (chat) {
+            loadMessages(chat.id, 0, true);
+        } else {
+            setMessages([]);
+        }
+    }, [chat]);
+
+    useEffect(() => {
+        if (searchTerm.length >= 2) {
+            performSearch();
+        } else {
+            setSearchResults([]);
+        }
+    }, [searchTerm]);
+
+    const loadMessages = async (chatId, newOffset = 0, reset = false) => {
+        setLoading(true);
+        try {
+            const response = await messageService.getChatMessages(chatId);
+
+            if (reset) {
+                setMessages(response.messages);
+                setOffset(50);
+            } else {
+                setMessages(prev => [...prev, ...response.messages]);
+                setOffset(prev => prev + 50);
+            }
+
+            setHasMore(response.messages.length === 50);
+        } catch (error) {
+            console.error('Error loading messages:', error);
+            toast.error('Failed to load messages');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const loadMoreMessages = () => {
+        if (chat && hasMore && !loading) {
+            loadMessages(chat.id, offset);
+        }
+    };
+
+    const performSearch = async () => {
+        try {
+            const response = await messageService.searchMessages(searchTerm, 50);
+            setSearchResults(response.results);
+        } catch (error) {
+            console.error('Error searching messages:', error);
+            toast.error('Search failed');
+        }
+    };
+
+    const scrollToBottom = () => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    };
+
+    const formatTime = (timestamp) => {
+        try {
+            const date = new Date(parseInt(timestamp));
+            return format(date, 'MMM dd, yyyy HH:mm');
+        } catch (error) {
+            return 'Unknown time';
+        }
+    };
+
+    const formatMessageBody = (body) => {
+        if (!body) return '';
+
+        // Simple URL detection and linking
+        const urlRegex = /(https?:\/\/[^\s]+)/g;
+        return body.replace(urlRegex, '<a href="$1" target="_blank" class="text-blue-600 hover:underline">$1</a>');
+    };
+
+    const MessageBubble = ({ message }) => (
+        <div className={`flex ${message.from_me ? 'justify-end' : 'justify-start'} mb-4`}>
+            <div
+                className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${message.from_me
+                        ? 'bg-whatsapp-green text-white'
+                        : 'bg-gray-200 text-gray-900'
+                    }`}
+            >
+                {!message.from_me && chat?.is_group && (
+                    <div className="text-xs font-medium mb-1 opacity-80">
+                        {message.sender_name || 'Unknown'}
+                    </div>
+                )}
+
+                <div
+                    className="text-sm break-words"
+                    dangerouslySetInnerHTML={{ __html: formatMessageBody(message.body) }}
+                />
+
+                <div className={`text-xs mt-1 ${message.from_me ? 'text-white opacity-80' : 'text-gray-500'}`}>
+                    {formatTime(message.timestamp)}
+                </div>
+            </div>
+        </div>
+    );
+
+    const SearchResultItem = ({ result }) => (
+        <div className="p-3 hover:bg-gray-50 border-b border-gray-100">
+            <div className="flex items-start space-x-3">
+                <div className="flex-1">
+                    <div className="flex items-center space-x-2 mb-1">
+                        <span className="text-sm font-medium text-gray-900">
+                            {result.chat_name}
+                        </span>
+                        <span className="text-xs text-gray-500">
+                            {formatTime(result.timestamp)}
+                        </span>
+                    </div>
+
+                    {result.sender_name && (
+                        <div className="text-xs text-gray-600 mb-1">
+                            {result.sender_name}
+                        </div>
+                    )}
+
+                    <div
+                        className="text-sm text-gray-800"
+                        dangerouslySetInnerHTML={{ __html: formatMessageBody(result.body) }}
+                    />
+                </div>
+            </div>
+        </div>
+    );
+
+    if (!chat) {
+        return (
+            <div className="h-full flex items-center justify-center bg-gray-50">
+                <div className="text-center">
+                    <ChatBubbleLeftIcon className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">
+                        Select a chat to view messages
+                    </h3>
+                    <p className="text-gray-500">
+                        Choose a chat from the sidebar to start viewing your archived messages
+                    </p>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="h-full flex flex-col">
+            {/* Header */}
+            <div className="bg-white border-b border-gray-200 px-6 py-4">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h2 className="text-lg font-semibold text-gray-900">
+                            {chat.chat_name}
+                        </h2>
+                        <p className="text-sm text-gray-500">
+                            {chat.is_group ? `Group • ${chat.participant_count} members` : 'Individual chat'} •
+                            {messages.length} messages loaded
+                        </p>
+                    </div>
+
+                    <button
+                        onClick={() => setShowSearch(!showSearch)}
+                        className={`p-2 rounded-md hover:bg-gray-100 ${showSearch ? 'bg-whatsapp-green text-white' : 'text-gray-500'}`}
+                    >
+                        <MagnifyingGlassIcon className="h-5 w-5" />
+                    </button>
+                </div>
+
+                {/* Search Bar */}
+                {showSearch && (
+                    <div className="mt-4">
+                        <div className="relative">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
+                            </div>
+                            <input
+                                type="text"
+                                placeholder="Search messages..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-whatsapp-green focus:border-whatsapp-green"
+                            />
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 overflow-hidden">
+                {showSearch && searchTerm.length >= 2 ? (
+                    /* Search Results */
+                    <div className="h-full overflow-y-auto">
+                        <div className="p-4 bg-blue-50 border-b border-blue-100">
+                            <p className="text-sm text-blue-800">
+                                {searchResults.length} results for "{searchTerm}"
+                            </p>
+                        </div>
+
+                        {searchResults.length === 0 ? (
+                            <div className="p-8 text-center">
+                                <MagnifyingGlassIcon className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                                <h3 className="text-sm font-medium text-gray-900 mb-1">No results found</h3>
+                                <p className="text-sm text-gray-500">
+                                    Try a different search term
+                                </p>
+                            </div>
+                        ) : (
+                            <div>
+                                {searchResults.map((result, index) => (
+                                    <SearchResultItem key={index} result={result} />
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                ) : (
+                    /* Messages */
+                    <div
+                        ref={messagesContainerRef}
+                        className="h-full overflow-y-auto p-4 bg-gray-50"
+                        style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%23f0f0f0" fill-opacity="0.1"%3E%3Cpath d="m0 40l40-40h-40v40z"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")' }}
+                    >
+                        {loading && messages.length === 0 ? (
+                            <div className="flex items-center justify-center h-full">
+                                <div className="text-center">
+                                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-whatsapp-green mx-auto mb-4"></div>
+                                    <p className="text-gray-500">Loading messages...</p>
+                                </div>
+                            </div>
+                        ) : messages.length === 0 ? (
+                            <div className="flex items-center justify-center h-full">
+                                <div className="text-center">
+                                    <ChatBubbleLeftIcon className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                                    <h3 className="text-lg font-medium text-gray-900 mb-2">
+                                        No messages yet
+                                    </h3>
+                                    <p className="text-gray-500">
+                                        Messages will appear here once you fetch them from WhatsApp
+                                    </p>
+                                </div>
+                            </div>
+                        ) : (
+                            <>
+                                {/* Load More Button */}
+                                {hasMore && (
+                                    <div className="text-center mb-4">
+                                        <button
+                                            onClick={loadMoreMessages}
+                                            disabled={loading}
+                                            className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-whatsapp-green disabled:opacity-50"
+                                        >
+                                            {loading ? (
+                                                <>
+                                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-500 mr-2"></div>
+                                                    Loading...
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <ArrowDownIcon className="h-4 w-4 mr-2" />
+                                                    Load older messages
+                                                </>
+                                            )}
+                                        </button>
+                                    </div>
+                                )}
+
+                                {/* Messages */}
+                                <div className="space-y-1">
+                                    {messages.map((message, index) => (
+                                        <MessageBubble key={index} message={message} />
+                                    ))}
+                                </div>
+
+                                <div ref={messagesEndRef} />
+                            </>
+                        )}
+                    </div>
+                )}
+            </div>
+
+            {/* Footer */}
+            <div className="bg-white border-t border-gray-200 px-6 py-3">
+                <div className="flex items-center justify-between text-sm text-gray-500">
+                    <div className="flex items-center space-x-2">
+                        <ClockIcon className="h-4 w-4" />
+                        <span>
+                            Last updated: {chat.last_message_time ? formatTime(new Date(chat.last_message_time).getTime()) : 'Never'}
+                        </span>
+                    </div>
+
+                    {messages.length > 0 && (
+                        <button
+                            onClick={scrollToBottom}
+                            className="inline-flex items-center px-3 py-1 border border-gray-300 rounded text-xs font-medium text-gray-700 bg-white hover:bg-gray-50"
+                        >
+                            <ArrowDownIcon className="h-3 w-3 mr-1" />
+                            Scroll to bottom
+                        </button>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+};
+
+export default MessageView;
