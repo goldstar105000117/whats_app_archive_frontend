@@ -52,21 +52,10 @@ const ChatList = ({ chats, selectedChat, onSelectChat }) => {
 
                     <div className="flex items-center justify-between mt-1">
                         <div className="flex items-center space-x-2">
-                            {chat.is_group && (
-                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                                    Group
-                                </span>
-                            )}
                             <span className="text-xs text-gray-500">
                                 {chat.message_count} messages
                             </span>
                         </div>
-
-                        {chat.is_group && (
-                            <span className="text-xs text-gray-400">
-                                {chat.participant_count} members
-                            </span>
-                        )}
                     </div>
                 </div>
             </div>

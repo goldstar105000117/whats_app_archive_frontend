@@ -102,12 +102,6 @@ const MessageView = ({ chat, messages, setMessages }) => {
                         : 'bg-gray-200 text-gray-900'
                     }`}
             >
-                {!message.from_me && chat?.is_group && (
-                    <div className="text-xs font-medium mb-1 opacity-80">
-                        {message.sender_name || 'Unknown'}
-                    </div>
-                )}
-
                 <div
                     className="text-sm break-words"
                     dangerouslySetInnerHTML={{ __html: formatMessageBody(message.body) }}
@@ -307,16 +301,6 @@ const MessageView = ({ chat, messages, setMessages }) => {
                             Last updated: {chat.last_message_time ? formatTime(new Date(chat.last_message_time).getTime()) : 'Never'}
                         </span>
                     </div>
-
-                    {messages.length > 0 && (
-                        <button
-                            onClick={scrollToBottom}
-                            className="inline-flex items-center px-3 py-1 border border-gray-300 rounded text-xs font-medium text-gray-700 bg-white hover:bg-gray-50"
-                        >
-                            <ArrowDownIcon className="h-3 w-3 mr-1" />
-                            Scroll to bottom
-                        </button>
-                    )}
                 </div>
             </div>
         </div>

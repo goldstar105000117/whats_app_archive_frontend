@@ -273,18 +273,18 @@ const Dashboard = () => {
         }
     };
 
-    const handleDisconnect = async () => {
-        try {
-            await whatsappService.disconnect();
-            setCurrentView('setup');
-            setChats([]);
-            setSelectedChat(null);
-            setMessages([]);
-            toast.success('WhatsApp disconnected');
-        } catch (error) {
-            toast.error('Failed to disconnect');
-        }
-    };
+    // const handleDisconnect = async () => {
+    //     try {
+    //         await whatsappService.disconnect();
+    //         setCurrentView('setup');
+    //         setChats([]);
+    //         setSelectedChat(null);
+    //         setMessages([]);
+    //         toast.success('WhatsApp disconnected');
+    //     } catch (error) {
+    //         toast.error('Failed to disconnect');
+    //     }
+    // };
 
     const handleExportData = async () => {
         try {
@@ -380,19 +380,6 @@ const Dashboard = () => {
                                     <QrCodeIcon className="h-5 w-5 mr-2" />
                                     {loading ? 'Initializing...' : 'Generate QR Code'}
                                 </button>
-
-                                {/* Temporary debug button */}
-                                <button
-                                    onClick={async () => {
-                                        await loadChats();
-                                        await loadStats();
-                                        setCurrentView('chats');
-                                        toast.success('Manually switched to chats view');
-                                    }}
-                                    className="inline-flex items-center px-4 py-2 border border-blue-300 text-sm font-medium rounded-md text-blue-700 bg-white hover:bg-blue-50"
-                                >
-                                    🧪 Test Chats View
-                                </button>
                             </div>
                         )}
                     </div>
@@ -443,13 +430,13 @@ const Dashboard = () => {
                             <ArrowDownTrayIcon className="h-4 w-4 mr-1" />
                             Export
                         </button>
-                        <button
+                        {/* <button
                             onClick={handleDeleteAllData}
                             className="flex-1 inline-flex items-center justify-center px-3 py-2 border border-red-300 text-sm font-medium rounded-md text-red-700 bg-white hover:bg-red-50"
                         >
                             <TrashIcon className="h-4 w-4 mr-1" />
                             Delete All
-                        </button>
+                        </button> */}
                     </div>
                 </div>
 
@@ -480,26 +467,6 @@ const Dashboard = () => {
                             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                                 Connected
                             </span>
-                        )}
-                    </div>
-
-                    <div className="flex items-center space-x-4">
-                        {(whatsappStatus.connected || currentView === 'chats') && (
-                            <>
-                                <button
-                                    onClick={() => setCurrentView(currentView === 'chats' ? 'stats' : 'chats')}
-                                    className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
-                                >
-                                    <ChartBarIcon className="h-4 w-4 mr-1" />
-                                    {currentView === 'chats' ? 'Stats' : 'Chats'}
-                                </button>
-                                <button
-                                    onClick={handleDisconnect}
-                                    className="inline-flex items-center px-3 py-2 border border-red-300 text-sm font-medium rounded-md text-red-700 bg-white hover:bg-red-50"
-                                >
-                                    Disconnect
-                                </button>
-                            </>
                         )}
                     </div>
                 </div>
