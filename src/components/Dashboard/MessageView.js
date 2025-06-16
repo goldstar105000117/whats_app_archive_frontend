@@ -102,6 +102,10 @@ const MessageView = ({ chat, messages, setMessages }) => {
     const getParticipants = () => {
         if (!chat || !chat.participants) return [];
 
+        if (typeof chat.participants != 'string') {
+            return chat.participants || [];
+        }
+
         try {
             const participants = JSON.parse(chat.participants);
             return Array.isArray(participants) ? participants : [];
