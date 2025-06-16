@@ -237,10 +237,13 @@ const Dashboard = () => {
             toast.success('WhatsApp initialization started');
         } catch (error) {
             toast.error('Failed to initialize WhatsApp');
-        } finally {
-            setLoading(false);
         }
     };
+
+    useEffect(() => {
+        if (!qrCode) return;
+        setLoading(false);
+    }, [qrCode]);
 
     const handleFetchMessages = async () => {
         setLoading(true);
@@ -351,7 +354,7 @@ const Dashboard = () => {
                             <div className="text-center">
                                 <button
                                     onClick={handleInitializeWhatsApp}
-                                    disabled={loading || !connected}
+                                    disabled={loading || !connected || qrCode}
                                     className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-whatsapp-green hover:bg-whatsapp-green-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-whatsapp-green disabled:opacity-50 disabled:cursor-not-allowed mr-4"
                                 >
                                     <QrCodeIcon className="h-5 w-5 mr-2" />

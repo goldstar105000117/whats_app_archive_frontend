@@ -3,7 +3,10 @@ import {
     MagnifyingGlassIcon,
     ChatBubbleLeftIcon,
     ArrowDownIcon,
-    ClockIcon
+    ClockIcon,
+    UsersIcon,
+    ChevronDownIcon,
+    ChevronUpIcon
 } from '@heroicons/react/24/outline';
 import { messageService } from '../../services/whatsapp';
 import { format } from 'date-fns';
@@ -14,6 +17,7 @@ const MessageView = ({ chat, messages, setMessages }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [searchResults, setSearchResults] = useState([]);
     const [showSearch, setShowSearch] = useState(false);
+    const [showParticipants, setShowParticipants] = useState(false);
     const [hasMore, setHasMore] = useState(true);
     const [offset, setOffset] = useState(0);
     const messagesEndRef = useRef(null);
@@ -94,26 +98,77 @@ const MessageView = ({ chat, messages, setMessages }) => {
         return body.replace(urlRegex, '<a href="$1" target="_blank" class="text-blue-600 hover:underline">$1</a>');
     };
 
+    // Function to parse and get participants
+    const getParticipants = () => {
+        if (!chat || !chat.participants) return [];
+
+        try {
+            const participants = JSON.parse(chat.participants);
+            return Array.isArray(participants) ? participants : [];
+        } catch (error) {
+            console.error('Error parsing participants:', error);
+            return [];
+        }
+    };
+
+    // Format phone number for display
+    const formatPhoneNumber = (number) => {
+        if (!number) return '';
+
+        // Remove any non-digit characters and format
+        const cleaned = number.replace(/\D/g, '');
+
+        // Basic formatting for international numbers
+        if (cleaned.length > 10) {
+            return `+${cleaned.slice(0, -10)} ${cleaned.slice(-10, -7)} ${cleaned.slice(-7, -4)} ${cleaned.slice(-4)}`;
+        } else if (cleaned.length === 10) {
+            return `${cleaned.slice(0, 3)} ${cleaned.slice(3, 6)} ${cleaned.slice(6)}`;
+        }
+
+        return number;
+    };
+
+    // Function to format sender name from WhatsApp format
+    const formatSenderName = (senderName) => {
+        if (!senderName) return null;
+
+        // Split by '@' and take the first part (phone number)
+        const phoneNumber = senderName.split('@')[0];
+
+        // Add '+' prefix
+        return `+${phoneNumber}`;
+    };
+
     const MessageBubble = ({ message }) => (
-        <div className={`flex ${message.from_me ? 'justify-end' : 'justify-start'} mb-4`}>
-            <div
-                className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${message.from_me
+        ((chat.is_group && message.sender_name != 'Unknown') || message.message_type != 'revoked') ? (
+            <div className={`flex ${message.from_me ? 'justify-end' : 'justify-start'} mb-4`}>
+                <div
+                    className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${message.from_me
                         ? 'bg-whatsapp-green text-white'
                         : 'bg-gray-200 text-gray-900'
-                    }`}
-            >
-                <div
-                    className="text-sm break-words"
-                    dangerouslySetInnerHTML={{ __html: formatMessageBody(message.body) }}
-                />
+                        }`}
+                >
+                    {/* Display sender name for non-self messages */}
+                    {(!message.from_me && message.sender_name && chat.is_group) ? (
+                        <div className={`text-xs mb-1 font-medium ${message.from_me ? 'text-white opacity-90' : 'text-gray-600'}`}>
+                            {formatSenderName(message.sender_name)}
+                        </div>
+                    ) : ''}
 
-                <div className={`text-xs mt-1 ${message.from_me ? 'text-white opacity-80' : 'text-gray-500'}`}>
-                    {formatTime(message.timestamp)}
+                    <div
+                        className="text-sm break-words"
+                        dangerouslySetInnerHTML={{ __html: formatMessageBody(message.body) }}
+                    />
+
+                    <div className={`text-xs mt-1 ${message.from_me ? 'text-white opacity-80' : 'text-gray-500'}`}>
+                        {formatTime(message.timestamp)}
+                    </div>
                 </div>
             </div>
-        </div>
+        ) : (
+            ''
+        )
     );
-
     const SearchResultItem = ({ result }) => (
         <div className="p-3 hover:bg-gray-50 border-b border-gray-100">
             <div className="flex items-start space-x-3">
@@ -142,6 +197,54 @@ const MessageView = ({ chat, messages, setMessages }) => {
         </div>
     );
 
+    const ParticipantsList = ({ participants }) => (
+        <div className="mt-4 bg-gray-50 rounded-lg p-4">
+            <div className="flex items-center justify-between mb-3">
+                <h4 className="text-sm font-medium text-gray-900 flex items-center">
+                    <UsersIcon className="h-4 w-4 mr-2" />
+                    Participants ({participants.length})
+                </h4>
+                <button
+                    onClick={() => setShowParticipants(!showParticipants)}
+                    className="text-gray-500 hover:text-gray-700"
+                >
+                    {showParticipants ? (
+                        <ChevronUpIcon className="h-4 w-4" />
+                    ) : (
+                        <ChevronDownIcon className="h-4 w-4" />
+                    )}
+                </button>
+            </div>
+
+            {showParticipants && (
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                    {participants.map((participant, index) => (
+                        <div key={index} className="flex items-center justify-between py-2 px-3 bg-white rounded border">
+                            <div className="flex items-center space-x-3">
+                                <div className="w-8 h-8 bg-whatsapp-green rounded-full flex items-center justify-center">
+                                    <span className="text-white text-xs font-medium">
+                                        {participant.name ? participant.name.charAt(0).toUpperCase() :
+                                            participant.number ? participant.number.slice(-2) : '?'}
+                                    </span>
+                                </div>
+                                <div>
+                                    <div className="text-xs text-gray-500">
+                                        {formatPhoneNumber(participant.number)}
+                                    </div>
+                                </div>
+                            </div>
+                            {participant.isAdmin && (
+                                <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
+                                    Admin
+                                </span>
+                            )}
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+
     if (!chat) {
         return (
             <div className="h-full flex items-center justify-center bg-gray-50">
@@ -158,12 +261,14 @@ const MessageView = ({ chat, messages, setMessages }) => {
         );
     }
 
+    const participants = getParticipants();
+
     return (
         <div className="h-full flex flex-col">
             {/* Header */}
             <div className="bg-white border-b border-gray-200 px-6 py-4">
                 <div className="flex items-center justify-between">
-                    <div>
+                    <div className="flex-1">
                         <h2 className="text-lg font-semibold text-gray-900">
                             {chat.chat_name}
                         </h2>
@@ -173,13 +278,30 @@ const MessageView = ({ chat, messages, setMessages }) => {
                         </p>
                     </div>
 
-                    <button
-                        onClick={() => setShowSearch(!showSearch)}
-                        className={`p-2 rounded-md hover:bg-gray-100 ${showSearch ? 'bg-whatsapp-green text-white' : 'text-gray-500'}`}
-                    >
-                        <MagnifyingGlassIcon className="h-5 w-5" />
-                    </button>
+                    <div className="flex items-center space-x-2">
+                        {(chat.is_group && participants.length > 0) ? (
+                            <button
+                                onClick={() => setShowParticipants(!showParticipants)}
+                                className="p-2 rounded-md hover:bg-gray-100 text-gray-500"
+                                title="Show participants"
+                            >
+                                <UsersIcon className="h-5 w-5" />
+                            </button>
+                        ) : ''}
+
+                        <button
+                            onClick={() => setShowSearch(!showSearch)}
+                            className={`p-2 rounded-md hover:bg-gray-100 ${showSearch ? 'bg-whatsapp-green text-white' : 'text-gray-500'}`}
+                        >
+                            <MagnifyingGlassIcon className="h-5 w-5" />
+                        </button>
+                    </div>
                 </div>
+
+                {/* Participants List */}
+                {(chat.is_group && participants.length > 0) ? (
+                    <ParticipantsList participants={participants} />
+                ) : ''}
 
                 {/* Search Bar */}
                 {showSearch && (
@@ -255,29 +377,6 @@ const MessageView = ({ chat, messages, setMessages }) => {
                             </div>
                         ) : (
                             <>
-                                {/* Load More Button */}
-                                {hasMore && (
-                                    <div className="text-center mb-4">
-                                        <button
-                                            onClick={loadMoreMessages}
-                                            disabled={loading}
-                                            className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-whatsapp-green disabled:opacity-50"
-                                        >
-                                            {loading ? (
-                                                <>
-                                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-500 mr-2"></div>
-                                                    Loading...
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <ArrowDownIcon className="h-4 w-4 mr-2" />
-                                                    Load older messages
-                                                </>
-                                            )}
-                                        </button>
-                                    </div>
-                                )}
-
                                 {/* Messages */}
                                 <div className="space-y-1">
                                     {messages.map((message, index) => (
