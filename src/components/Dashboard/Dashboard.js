@@ -36,14 +36,6 @@ const Dashboard = () => {
         };
     }, []);
 
-    useEffect(() => {
-        if (whatsappStatus.connected) {
-            setCurrentView('chats');
-            loadChats();
-            loadStats();
-        }
-    }, [whatsappStatus.connected]);
-
     // Check for existing session on component mount
     useEffect(() => {
         let abortController = new AbortController();
@@ -301,21 +293,6 @@ const Dashboard = () => {
             toast.success('Data exported successfully');
         } catch (error) {
             toast.error('Failed to export data');
-        }
-    };
-
-    const handleDeleteAllData = async () => {
-        if (window.confirm('Are you sure you want to delete all chat data? This action cannot be undone.')) {
-            try {
-                await messageService.deleteAllData();
-                setChats([]);
-                setSelectedChat(null);
-                setMessages([]);
-                setStats(null);
-                toast.success('All data deleted successfully');
-            } catch (error) {
-                toast.error('Failed to delete data');
-            }
         }
     };
 
