@@ -98,9 +98,12 @@ const ChatList = ({ chats, selectedChat, onSelectChat }) => {
                     </div>
                 ) : (
                     <div>
-                        {filteredChats.map((chat) => (
-                            <ChatItem key={chat.id} chat={chat} />
-                        ))}
+                        {filteredChats
+                            .filter(chat => chat.participant_count > 1)
+                            .map((chat) => (
+                                <ChatItem key={chat.id} chat={chat} />
+                            ))
+                        }
                     </div>
                 )}
             </div>
