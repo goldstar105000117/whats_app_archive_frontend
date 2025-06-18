@@ -143,8 +143,45 @@ const MessageView = ({ chat, messages, setMessages }) => {
         return `+${phoneNumber}`;
     };
 
-    const MessageBubble = ({ message }) => (
-        ((chat.is_group && message.sender_name != 'Unknown') || message.message_type != 'revoked') ? (
+    const MessageBubble = ({ message }) => {
+        // Handle deleted/revoked messages
+        if (message.message_type === 'revoked') {
+            return (
+                <div className={`flex ${message.from_me ? 'justify-end' : 'justify-start'} mb-4`}>
+                    <div
+                        className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${message.from_me
+                            ? 'bg-whatsapp-green text-white'
+                            : 'bg-gray-200 text-gray-900'
+                            }`}
+                    >
+                        {/* Display sender name for non-self messages in groups */}
+                        {(!message.from_me && message.sender_name && chat.is_group) ? (
+                            <div className={`text-xs mb-1 font-medium ${message.from_me ? 'text-white opacity-90' : 'text-gray-600'}`}>
+                                {formatSenderName(message.sender_name)}
+                            </div>
+                        ) : ('')}
+
+                        <div className="text-sm italic text-center flex items-center justify-center">
+                            <svg className="w-4 h-4 mr-2" fill="white" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                            </svg>
+                            This message was deleted
+                        </div>
+
+                        <div className={`text-xs mt-1 ${message.from_me ? 'text-white opacity-80' : 'text-gray-500'}`}>
+                            {formatTime(message.timestamp)}
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // Handle regular messages (but only show if conditions are met)
+        if ((chat.is_group && message.sender_name === 'Unknown')) {
+            return null; // Don't display messages from unknown senders in groups
+        }
+
+        return (
             <div className={`flex ${message.from_me ? 'justify-end' : 'justify-start'} mb-4`}>
                 <div
                     className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${message.from_me
@@ -152,12 +189,12 @@ const MessageView = ({ chat, messages, setMessages }) => {
                         : 'bg-gray-200 text-gray-900'
                         }`}
                 >
-                    {/* Display sender name for non-self messages */}
+                    {/* Display sender name for non-self messages in groups */}
                     {(!message.from_me && message.sender_name && chat.is_group) ? (
                         <div className={`text-xs mb-1 font-medium ${message.from_me ? 'text-white opacity-90' : 'text-gray-600'}`}>
                             {formatSenderName(message.sender_name)}
                         </div>
-                    ) : ''}
+                    ) : ('')}
 
                     <div
                         className="text-sm break-words"
@@ -169,10 +206,9 @@ const MessageView = ({ chat, messages, setMessages }) => {
                     </div>
                 </div>
             </div>
-        ) : (
-            ''
-        )
-    );
+        );
+    };
+
     const SearchResultItem = ({ result }) => (
         <div className="p-3 hover:bg-gray-50 border-b border-gray-100">
             <div className="flex items-start space-x-3">

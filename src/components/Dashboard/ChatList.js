@@ -14,12 +14,13 @@ const ChatList = ({ chats, selectedChat, onSelectChat }) => {
         chat.chat_name.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    const formatDate = (dateString) => {
-        if (!dateString) return '';
+    const formatDate = (timestamp) => {
+        console.log('Formatting date for timestamp:', timestamp);
         try {
-            return format(new Date(dateString), 'MMM dd, yyyy');
+            const date = new Date(parseInt(timestamp));
+            return format(date, 'MMM dd, yyyy');
         } catch (error) {
-            return '';
+            return 'Unknown time';
         }
     };
 
