@@ -50,7 +50,7 @@ export const whatsappService = {
 
     getQRCode: async () => {
         const response = await api.get('/whatsapp/qr');
-        return response.data;
+        return response.data.qr;
     },
 
     // Updated to support unlimited fetching with background processing

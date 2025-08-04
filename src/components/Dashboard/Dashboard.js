@@ -16,7 +16,7 @@ import {
 import toast from 'react-hot-toast';
 
 const Dashboard = () => {
-    const { connected, qrCode, whatsappStatus } = useWebSocket();
+    // const { connected, qrCode, whatsappStatus } = useWebSocket();
     const [currentView, setCurrentView] = useState('setup');
     const [chats, setChats] = useState([]);
     const [selectedChat, setSelectedChat] = useState(null);
@@ -24,6 +24,7 @@ const Dashboard = () => {
     const [stats, setStats] = useState(null);
     const [loading, setLoading] = useState(false);
     const [initializing, setInitializing] = useState(true);
+    const [qrCode, setQrCode] = useState(null);
 
     // Add ref to track if session check has been completed
     const sessionCheckCompleted = useRef(false);
@@ -42,7 +43,8 @@ const Dashboard = () => {
         let timeoutId;
 
         // Only run session check once and when connected
-        if (connected && !sessionCheckCompleted.current) {
+        // if (connected && !sessionCheckCompleted.current) {
+        if (!sessionCheckCompleted.current) {
             console.log('WebSocket connected, checking existing session...');
             sessionCheckCompleted.current = true; // Mark as started
 
@@ -127,7 +129,8 @@ const Dashboard = () => {
 
             // Add a delay to prevent immediate duplicate calls
             timeoutId = setTimeout(checkSession, 200);
-        } else if (!connected) {
+        // } else if (!connected) {
+        } else {
             console.log('WebSocket not connected yet, waiting...');
             setInitializing(false);
             sessionCheckCompleted.current = false; // Reset for next connection
@@ -137,7 +140,8 @@ const Dashboard = () => {
             if (timeoutId) clearTimeout(timeoutId);
             abortController.abort();
         };
-    }, [connected]); // Only depend on connected state
+    // }, [connected]); // Only depend on connected state
+    }, []); // Only depend on connected state
 
     // Add this to your Dashboard component for real-time chat updates
 
@@ -231,19 +235,24 @@ const Dashboard = () => {
     };
 
     const handleInitializeWhatsApp = async () => {
+        setQrCode(null);
         setLoading(true);
         try {
-            await whatsappService.initialize();
+            // await whatsappService.initialize();
+            const data = await whatsappService.getQRCode();
+            setQrCode(data);
             toast.success('WhatsApp initialization started');
+            setLoading(false);
         } catch (error) {
             toast.error('Failed to initialize WhatsApp');
+            setLoading(false);
         }
     };
 
-    useEffect(() => {
-        if (!qrCode) return;
-        setLoading(false);
-    }, [qrCode]);
+    // useEffect(() => {
+    //     if (!qrCode) return;
+    //     setLoading(false);
+    // }, [qrCode]);
 
     const handleFetchMessages = async () => {
         setLoading(true);
@@ -332,15 +341,18 @@ const Dashboard = () => {
                     <div className="space-y-6">
                         <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                             <div className="flex items-center space-x-3">
-                                <div className={`h-3 w-3 rounded-full ${connected ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                                {/* <div className={`h-3 w-3 rounded-full ${connected ? 'bg-green-500' : 'bg-red-500'}`}></div> */}
+                                <div className={`h-3 w-3 rounded-full bg-green-500`}></div>
                                 <span className="font-medium">WebSocket Connection</span>
                             </div>
-                            <span className={`text-sm ${connected ? 'text-green-600' : 'text-red-600'}`}>
-                                {connected ? 'Connected' : 'Disconnected'}
+                            <span className={`text-sm text-green-600`}>
+                            {/* <span className={`text-sm ${connected ? 'text-green-600' : 'text-red-600'}`}> */}
+                                Connected
+                                {/* {connected ? 'Connected' : 'Disconnected'} */}
                             </span>
                         </div>
 
-                        <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                        {/* <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                             <div className="flex items-center space-x-3">
                                 <div className={`h-3 w-3 rounded-full ${whatsappStatus.connected ? 'bg-green-500' : 'bg-yellow-500'}`}></div>
                                 <span className="font-medium">WhatsApp Status</span>
@@ -348,20 +360,21 @@ const Dashboard = () => {
                             <span className={`text-sm ${whatsappStatus.connected ? 'text-green-600' : 'text-yellow-600'}`}>
                                 {whatsappStatus.connected ? `Connected (${whatsappStatus.phoneNumber})` : 'Not Connected'}
                             </span>
-                        </div>
+                        </div> */}
 
-                        {!whatsappStatus.connected && (
+                        {/* {!whatsappStatus.connected && ( */}
                             <div className="text-center">
                                 <button
                                     onClick={handleInitializeWhatsApp}
-                                    disabled={loading || !connected || qrCode}
+                                    // disabled={loading || !connected || qrCode}
+                                    disabled={loading}
                                     className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-whatsapp-green hover:bg-whatsapp-green-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-whatsapp-green disabled:opacity-50 disabled:cursor-not-allowed mr-4"
                                 >
                                     <QrCodeIcon className="h-5 w-5 mr-2" />
                                     {loading ? 'Initializing...' : 'Generate QR Code'}
                                 </button>
                             </div>
-                        )}
+                        {/* )} */}
                     </div>
                 </div>
 
@@ -443,17 +456,18 @@ const Dashboard = () => {
                 <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-4">
                         <h1 className="text-2xl font-bold text-gray-900">WhatsApp Archive</h1>
-                        {(whatsappStatus.connected || currentView === 'chats') && (
+                        {/* {(whatsappStatus.connected || currentView === 'chats') && (
                             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                                 Connected
                             </span>
-                        )}
+                        )} */}
                     </div>
                 </div>
             </div>
 
             <div className="flex-1 overflow-hidden">
-                {(whatsappStatus.connected || currentView === 'chats') ? renderChatsView() : renderSetupView()}
+                {/* {(whatsappStatus.connected || currentView === 'chats') ? renderChatsView() : renderSetupView()} */}
+                {(currentView === 'chats') ? renderChatsView() : renderSetupView()}
             </div>
         </div>
     );
